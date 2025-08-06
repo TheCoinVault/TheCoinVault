@@ -94,11 +94,28 @@ anadir_moneda(moneda_2_datos)
 # 9. Mostramos el tamaño actual de nuestra colección.
 print(f"\nMi colección tiene {len(mi_coleccion)} monedas.")
 
-# 10. Definimos una función para buscar monedas por país emisor (lógica).
-def buscar_por_pais(pais):
+# 10. Definimos una función para buscar monedas por país emisor Y año de acuñación (lógica).
+def buscar_monedas(pais=None, anio=None):
     monedas_encontradas = []
     for moneda in mi_coleccion:
-        if moneda["pais_emisor"].upper() == pais.upper(): # Convertimos a mayúsculas para que la búsqueda no distinga entre mayúsculas y minúsculas
+        # Comprobamos si el país coincide (si se proporcionó un país para buscar)
+        pais_coincide = True
+        if pais:
+            if moneda["pais_emisor"].upper() != pais.upper():
+                pais_coincide = False
+        
+        # Comprobamos si el año coincide (si se proporcionó un año para buscar)
+        anio_coincide = True
+        if anio:
+            try:
+                if moneda["anio_acunacion"] != int(anio):
+                    anio_coincide = False
+            except ValueError:
+                # Si el año en el campo no es un número válido, no coincide
+                anio_coincide = False
+
+        # Si ambos criterios coinciden (o no se especificaron), añadimos la moneda
+        if pais_coincide and anio_coincide:
             monedas_encontradas.append(moneda)
     return monedas_encontradas
 
@@ -123,7 +140,7 @@ class TheCoinVaultApp(QWidget):
 
         self.init_tab_coleccion()
         self.init_tab_anadir()
-        self.init_tab_buscar() # <-- Aquí inicializamos la nueva pestaña de búsqueda
+        self.init_tab_buscar() 
         self.init_tab_estadisticas()
 
         main_layout = QVBoxLayout()
@@ -189,16 +206,24 @@ class TheCoinVaultApp(QWidget):
         layout = QVBoxLayout() # Layout principal de la pestaña de búsqueda
 
         # Campo de entrada para el país a buscar
-        search_layout = QHBoxLayout() # Layout horizontal para el campo y el botón
-        search_label = QLabel("Buscar por País Emisor:")
-        self.search_input = QLineEdit(self) # Campo donde el usuario escribirá el país
-        btn_buscar = QPushButton("Buscar")
-        
-        search_layout.addWidget(search_label)
-        search_layout.addWidget(self.search_input)
-        search_layout.addWidget(btn_buscar)
+        search_pais_layout = QHBoxLayout() # Layout horizontal para el campo y el botón
+        search_pais_label = QLabel("Buscar por País Emisor:")
+        self.search_pais_input = QLineEdit(self) # Campo donde el usuario escribirá el país
+        search_pais_layout.addWidget(search_pais_label)
+        search_pais_layout.addWidget(self.search_pais_input)
+        layout.addLayout(search_pais_layout) # Añadimos el layout horizontal al layout principal
 
-        layout.addLayout(search_layout) # Añadimos el layout horizontal al layout principal
+        # Campo de entrada para el año a buscar (NUEVO)
+        search_anio_layout = QHBoxLayout()
+        search_anio_label = QLabel("Buscar por Año de Acuñación:")
+        self.search_anio_input = QLineEdit(self) # Campo donde el usuario escribirá el año
+        search_anio_layout.addWidget(search_anio_label)
+        search_anio_layout.addWidget(self.search_anio_input)
+        layout.addLayout(search_anio_layout)
+
+        # Botón de búsqueda
+        btn_buscar = QPushButton("Buscar Monedas")
+        layout.addWidget(btn_buscar)
 
         # Área para mostrar los resultados
         self.search_results_area = QTextEdit(self)
@@ -241,27 +266,31 @@ class TheCoinVaultApp(QWidget):
         QMessageBox.information(self, "Moneda Añadida", "¡La moneda ha sido añadida a tu colección!")
         self.limpiar_campos_anadir()
 
-    def limpiar_campos_anadir(self):
-        for line_edit in self.campos_anadir.values():
-            line_edit.clear()
-
     def procesar_busqueda_moneda(self):
-        pais_a_buscar = self.search_input.text() # Obtenemos el texto del campo de búsqueda
-        if not pais_a_buscar:
-            QMessageBox.warning(self, "Búsqueda Vacía", "Por favor, introduce un país para buscar.")
+        pais_a_buscar = self.search_pais_input.text() # Obtenemos el texto del campo de país
+        anio_a_buscar = self.search_anio_input.text() # Obtenemos el texto del campo de año (NUEVO)
+
+        # Si ambos campos están vacíos, mostramos una advertencia
+        if not pais_a_buscar and not anio_a_buscar:
+            QMessageBox.warning(self, "Búsqueda Vacía", "Por favor, introduce al menos un País Emisor o un Año de Acuñación para buscar.")
             return
 
-        monedas_encontradas = buscar_por_pais(pais_a_buscar) # Llamamos a nuestra función de lógica
+        # Llamamos a nuestra función de lógica de búsqueda con ambos parámetros
+        monedas_encontradas = buscar_monedas(pais=pais_a_buscar, anio=anio_a_buscar)
         
         self.search_results_area.clear() # Limpiamos el área de resultados antes de mostrar nuevos
         
         if monedas_encontradas:
-            self.search_results_area.append(f"Se encontraron {len(monedas_encontradas)} monedas de '{pais_a_buscar}':\n")
+            self.search_results_area.append(f"Se encontraron {len(monedas_encontradas)} monedas con los criterios especificados:\n")
             for moneda in monedas_encontradas:
-                self.search_results_area.append(f"- Código: {moneda['codigo_unico']}, Tipo: {moneda['tipo_moneda']}, Año: {moneda['anio_acunacion']}")
+                self.search_results_area.append(f"- Código: {moneda['codigo_unico']}, Tipo: {moneda['tipo_moneda']}, Año: {moneda['anio_acunacion']}, País: {moneda['pais_emisor']}")
         else:
-            self.search_results_area.append(f"No se encontraron monedas de '{pais_a_buscar}'.")
+            self.search_results_area.append(f"No se encontraron monedas con los criterios especificados.")
 
+
+    def limpiar_campos_anadir(self):
+        for line_edit in self.campos_anadir.values():
+            line_edit.clear()
 
 # 2. El bloque principal para ejecutar la aplicación.
 if __name__ == '__main__':
