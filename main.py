@@ -1,5 +1,8 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QTabWidget
+from PyQt6.QtWidgets import (
+    QApplication, QWidget, QLabel, QVBoxLayout, QTabWidget,
+    QLineEdit, QPushButton, QGridLayout, QMessageBox # Nuevas importaciones
+)
 
 # ---- INICIO DEL CÓDIGO DE LA COLECCIÓN ----
 # 1. Creamos nuestra lista vacía para guardar la colección.
@@ -98,42 +101,90 @@ class TheCoinVaultApp(QWidget):
         self.setWindowTitle('The Coin Vault')
         self.setGeometry(100, 100, 800, 600)  # (x, y, ancho, alto)
         
-        # Creamos el widget de pestañas
         self.tabs = QTabWidget()
         
-        # Creamos las pestañas individuales
         self.tab_coleccion = QWidget()
         self.tab_anadir = QWidget()
         self.tab_buscar = QWidget()
         self.tab_estadisticas = QWidget()
 
-        # Añadimos las pestañas al widget de pestañas
         self.tabs.addTab(self.tab_coleccion, "Mi Colección")
         self.tabs.addTab(self.tab_anadir, "Añadir Moneda")
         self.tabs.addTab(self.tab_buscar, "Buscar Moneda")
         self.tabs.addTab(self.tab_estadisticas, "Estadísticas")
 
-        # Configuramos el contenido de cada pestaña
         self.init_tab_coleccion()
-        self.init_tab_anadir()
+        self.init_tab_anadir() # <-- Aquí inicializamos la nueva pestaña
         self.init_tab_buscar()
         self.init_tab_estadisticas()
 
-        # Creamos el layout principal de la ventana y añadimos las pestañas
         main_layout = QVBoxLayout()
         main_layout.addWidget(self.tabs)
         self.setLayout(main_layout)
 
-    # Métodos para inicializar el contenido de cada pestaña
     def init_tab_coleccion(self):
         layout = QVBoxLayout()
         layout.addWidget(QLabel("Aquí se mostrará tu colección de monedas."))
         self.tab_coleccion.setLayout(layout)
 
     def init_tab_anadir(self):
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel("Aquí podrás añadir nuevas monedas."))
-        self.tab_anadir.setLayout(layout)
+        # Creamos un layout de cuadrícula para organizar los campos
+        grid_layout = QGridLayout()
+
+        # Creamos los campos de entrada para los datos de la moneda
+        # Usamos una lista de tuplas para definir las etiquetas y los nombres de los campos
+        self.campos_anadir = {} # Diccionario para guardar referencias a los QLineEdit
+        campos_a_mostrar = [
+            ("País Emisor (3 letras):", "pais_emisor"),
+            ("Año de Acuñación:", "anio_acunacion"),
+            ("Tipo de Moneda:", "tipo_moneda"),
+            ("Años de Emisión:", "anios_emision"),
+            ("Valor Numérico:", "valor_numerico"),
+            ("Valor Nominal (Texto):", "valor_nominal_texto"),
+            ("Unidad Monetaria:", "unidad_monetaria"),
+            ("Composición Material:", "composicion_material"),
+            ("Peso (g):", "peso_g"),
+            ("Diámetro (mm):", "diametro_mm"),
+            ("Grosor (mm):", "grosor_mm"),
+            ("Orientación:", "orientacion"),
+            ("Desmonetización:", "desmonetizacion"),
+            ("Tipo de Canto:", "tipo_canto"),
+            ("Casa de la Moneda (Ceca):", "ceca"),
+            ("Tirada:", "tirada"),
+            ("Cantidad en mi Colección:", "cantidad_en_coleccion"),
+            ("Estado de Conservación:", "estado_conservacion"),
+            ("Nota:", "nota"),
+            ("Foto Anverso (URL):", "foto_anverso"),
+            ("Foto Reverso (URL):", "foto_reverso"),
+            ("Foto Bandera País (URL):", "foto_bandera"),
+            ("Foto Escudo País (URL):", "foto_escudo")
+        ]
+
+        # Añadimos las etiquetas y los campos de entrada al layout de cuadrícula
+        row = 0
+        for label_text, field_name in campos_a_mostrar:
+            label = QLabel(label_text)
+            line_edit = QLineEdit(self)
+            self.campos_anadir[field_name] = line_edit # Guardamos la referencia al campo
+            grid_layout.addWidget(label, row, 0) # Etiqueta en columna 0
+            grid_layout.addWidget(line_edit, row, 1) # Campo en columna 1
+            row += 1
+
+        # Creamos los botones
+        btn_anadir = QPushButton("Añadir Moneda")
+        btn_limpiar = QPushButton("Limpiar Campos")
+
+        # Conectamos el botón "Añadir Moneda" a una función (la crearemos en el siguiente paso)
+        btn_anadir.clicked.connect(self.procesar_anadir_moneda)
+        # Conectamos el botón "Limpiar Campos" a una función (la crearemos en el siguiente paso)
+        btn_limpiar.clicked.connect(self.limpiar_campos_anadir)
+
+        # Añadimos los botones al layout de cuadrícula
+        grid_layout.addWidget(btn_anadir, row, 0)
+        grid_layout.addWidget(btn_limpiar, row, 1)
+
+        # Establecemos el layout de cuadrícula para la pestaña de añadir
+        self.tab_anadir.setLayout(grid_layout)
 
     def init_tab_buscar(self):
         layout = QVBoxLayout()
@@ -144,6 +195,42 @@ class TheCoinVaultApp(QWidget):
         layout = QVBoxLayout()
         layout.addWidget(QLabel("Aquí verás estadísticas de tu colección."))
         self.tab_estadisticas.setLayout(layout)
+
+    # --- Funciones para manejar la interacción de la interfaz ---
+    def procesar_anadir_moneda(self):
+        # Esta función se ejecutará cuando se haga clic en "Añadir Moneda"
+        datos_nueva_moneda = {}
+        # Recorremos todos los campos de entrada y obtenemos sus valores
+        for field_name, line_edit in self.campos_anadir.items():
+            datos_nueva_moneda[field_name] = line_edit.text()
+        
+        # Validaciones básicas (puedes añadir más si quieres)
+        if not datos_nueva_moneda.get("pais_emisor") or not datos_nueva_moneda.get("anio_acunacion"):
+            QMessageBox.warning(self, "Error de Entrada", "Los campos 'País Emisor' y 'Año de Acuñación' son obligatorios.")
+            return
+
+        # Convertir a tipos numéricos si es necesario
+        try:
+            datos_nueva_moneda['anio_acunacion'] = int(datos_nueva_moneda['anio_acunacion'])
+            datos_nueva_moneda['valor_numerico'] = float(datos_nueva_moneda['valor_numerico']) if datos_nueva_moneda['valor_numerico'] else 0.0
+            datos_nueva_moneda['peso_g'] = float(datos_nueva_moneda['peso_g']) if datos_nueva_moneda['peso_g'] else 0.0
+            datos_nueva_moneda['diametro_mm'] = float(datos_nueva_moneda['diametro_mm']) if datos_nueva_moneda['diametro_mm'] else 0.0
+            datos_nueva_moneda['grosor_mm'] = float(datos_nueva_moneda['grosor_mm']) if datos_nueva_moneda['grosor_mm'] else 0.0
+            datos_nueva_moneda['tirada'] = int(datos_nueva_moneda['tirada']) if datos_nueva_moneda['tirada'] else 0
+            datos_nueva_moneda['cantidad_en_coleccion'] = int(datos_nueva_moneda['cantidad_en_coleccion']) if datos_nueva_moneda['cantidad_en_coleccion'] else 0
+        except ValueError:
+            QMessageBox.critical(self, "Error de Formato", "Por favor, introduce valores numéricos válidos para los campos correspondientes (Año, Valor Numérico, Peso, Diámetro, Grosor, Tirada, Cantidad).")
+            return
+
+        # Llamamos a nuestra función de lógica para añadir la moneda
+        anadir_moneda(datos_nueva_moneda)
+        QMessageBox.information(self, "Moneda Añadida", "¡La moneda ha sido añadida a tu colección!")
+        self.limpiar_campos_anadir() # Limpiamos los campos después de añadir
+
+    def limpiar_campos_anadir(self):
+        # Esta función se ejecutará cuando se haga clic en "Limpiar Campos"
+        for line_edit in self.campos_anadir.values():
+            line_edit.clear() # Borra el texto de cada campo de entrada
 
 # 2. El bloque principal para ejecutar la aplicación.
 if __name__ == '__main__':
