@@ -1,0 +1,1 @@
+print("¡Hola, coleccionista de monedas!")
