@@ -1,3 +1,7 @@
+import sys
+from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QTabWidget
+
+# ---- INICIO DEL CÓDIGO DE LA COLECCIÓN ----
 # 1. Creamos nuestra lista vacía para guardar la colección.
 mi_coleccion = []
 
@@ -86,3 +90,64 @@ anadir_moneda(moneda_2_datos)
 
 # 9. Mostramos el tamaño actual de nuestra colección.
 print(f"\nMi colección tiene {len(mi_coleccion)} monedas.")
+
+# ---- INICIO DEL CÓDIGO DE LA INTERFAZ ----
+class TheCoinVaultApp(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle('The Coin Vault')
+        self.setGeometry(100, 100, 800, 600)  # (x, y, ancho, alto)
+        
+        # Creamos el widget de pestañas
+        self.tabs = QTabWidget()
+        
+        # Creamos las pestañas individuales
+        self.tab_coleccion = QWidget()
+        self.tab_anadir = QWidget()
+        self.tab_buscar = QWidget()
+        self.tab_estadisticas = QWidget()
+
+        # Añadimos las pestañas al widget de pestañas
+        self.tabs.addTab(self.tab_coleccion, "Mi Colección")
+        self.tabs.addTab(self.tab_anadir, "Añadir Moneda")
+        self.tabs.addTab(self.tab_buscar, "Buscar Moneda")
+        self.tabs.addTab(self.tab_estadisticas, "Estadísticas")
+
+        # Configuramos el contenido de cada pestaña
+        self.init_tab_coleccion()
+        self.init_tab_anadir()
+        self.init_tab_buscar()
+        self.init_tab_estadisticas()
+
+        # Creamos el layout principal de la ventana y añadimos las pestañas
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(self.tabs)
+        self.setLayout(main_layout)
+
+    # Métodos para inicializar el contenido de cada pestaña
+    def init_tab_coleccion(self):
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("Aquí se mostrará tu colección de monedas."))
+        self.tab_coleccion.setLayout(layout)
+
+    def init_tab_anadir(self):
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("Aquí podrás añadir nuevas monedas."))
+        self.tab_anadir.setLayout(layout)
+
+    def init_tab_buscar(self):
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("Aquí podrás buscar monedas en tu colección."))
+        self.tab_buscar.setLayout(layout)
+
+    def init_tab_estadisticas(self):
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("Aquí verás estadísticas de tu colección."))
+        self.tab_estadisticas.setLayout(layout)
+
+# 2. El bloque principal para ejecutar la aplicación.
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    ventana = TheCoinVaultApp()
+    ventana.show()  # Muestra la ventana en pantalla
+    sys.exit(app.exec())
