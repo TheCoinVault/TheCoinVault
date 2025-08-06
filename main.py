@@ -1,7 +1,7 @@
 import sys
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QLabel, QVBoxLayout, QTabWidget,
-    QLineEdit, QPushButton, QGridLayout, QMessageBox # Nuevas importaciones
+    QLineEdit, QPushButton, QGridLayout, QMessageBox, QTextEdit, QHBoxLayout # Nuevas importaciones
 )
 
 # ---- INICIO DEL CÓDIGO DE LA COLECCIÓN ----
@@ -94,6 +94,14 @@ anadir_moneda(moneda_2_datos)
 # 9. Mostramos el tamaño actual de nuestra colección.
 print(f"\nMi colección tiene {len(mi_coleccion)} monedas.")
 
+# 10. Definimos una función para buscar monedas por país emisor (lógica).
+def buscar_por_pais(pais):
+    monedas_encontradas = []
+    for moneda in mi_coleccion:
+        if moneda["pais_emisor"].upper() == pais.upper(): # Convertimos a mayúsculas para que la búsqueda no distinga entre mayúsculas y minúsculas
+            monedas_encontradas.append(moneda)
+    return monedas_encontradas
+
 # ---- INICIO DEL CÓDIGO DE LA INTERFAZ ----
 class TheCoinVaultApp(QWidget):
     def __init__(self):
@@ -114,8 +122,8 @@ class TheCoinVaultApp(QWidget):
         self.tabs.addTab(self.tab_estadisticas, "Estadísticas")
 
         self.init_tab_coleccion()
-        self.init_tab_anadir() # <-- Aquí inicializamos la nueva pestaña
-        self.init_tab_buscar()
+        self.init_tab_anadir()
+        self.init_tab_buscar() # <-- Aquí inicializamos la nueva pestaña de búsqueda
         self.init_tab_estadisticas()
 
         main_layout = QVBoxLayout()
@@ -128,12 +136,9 @@ class TheCoinVaultApp(QWidget):
         self.tab_coleccion.setLayout(layout)
 
     def init_tab_anadir(self):
-        # Creamos un layout de cuadrícula para organizar los campos
         grid_layout = QGridLayout()
 
-        # Creamos los campos de entrada para los datos de la moneda
-        # Usamos una lista de tuplas para definir las etiquetas y los nombres de los campos
-        self.campos_anadir = {} # Diccionario para guardar referencias a los QLineEdit
+        self.campos_anadir = {}
         campos_a_mostrar = [
             ("País Emisor (3 letras):", "pais_emisor"),
             ("Año de Acuñación:", "anio_acunacion"),
@@ -160,35 +165,49 @@ class TheCoinVaultApp(QWidget):
             ("Foto Escudo País (URL):", "foto_escudo")
         ]
 
-        # Añadimos las etiquetas y los campos de entrada al layout de cuadrícula
         row = 0
         for label_text, field_name in campos_a_mostrar:
             label = QLabel(label_text)
             line_edit = QLineEdit(self)
-            self.campos_anadir[field_name] = line_edit # Guardamos la referencia al campo
-            grid_layout.addWidget(label, row, 0) # Etiqueta en columna 0
-            grid_layout.addWidget(line_edit, row, 1) # Campo en columna 1
+            self.campos_anadir[field_name] = line_edit
+            grid_layout.addWidget(label, row, 0)
+            grid_layout.addWidget(line_edit, row, 1)
             row += 1
 
-        # Creamos los botones
         btn_anadir = QPushButton("Añadir Moneda")
         btn_limpiar = QPushButton("Limpiar Campos")
 
-        # Conectamos el botón "Añadir Moneda" a una función (la crearemos en el siguiente paso)
         btn_anadir.clicked.connect(self.procesar_anadir_moneda)
-        # Conectamos el botón "Limpiar Campos" a una función (la crearemos en el siguiente paso)
         btn_limpiar.clicked.connect(self.limpiar_campos_anadir)
 
-        # Añadimos los botones al layout de cuadrícula
         grid_layout.addWidget(btn_anadir, row, 0)
         grid_layout.addWidget(btn_limpiar, row, 1)
 
-        # Establecemos el layout de cuadrícula para la pestaña de añadir
         self.tab_anadir.setLayout(grid_layout)
 
     def init_tab_buscar(self):
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel("Aquí podrás buscar monedas en tu colección."))
+        layout = QVBoxLayout() # Layout principal de la pestaña de búsqueda
+
+        # Campo de entrada para el país a buscar
+        search_layout = QHBoxLayout() # Layout horizontal para el campo y el botón
+        search_label = QLabel("Buscar por País Emisor:")
+        self.search_input = QLineEdit(self) # Campo donde el usuario escribirá el país
+        btn_buscar = QPushButton("Buscar")
+        
+        search_layout.addWidget(search_label)
+        search_layout.addWidget(self.search_input)
+        search_layout.addWidget(btn_buscar)
+
+        layout.addLayout(search_layout) # Añadimos el layout horizontal al layout principal
+
+        # Área para mostrar los resultados
+        self.search_results_area = QTextEdit(self)
+        self.search_results_area.setReadOnly(True) # Hacemos que el área de texto sea de solo lectura
+        layout.addWidget(self.search_results_area)
+
+        # Conectamos el botón de búsqueda a la función que procesará la búsqueda
+        btn_buscar.clicked.connect(self.procesar_busqueda_moneda)
+
         self.tab_buscar.setLayout(layout)
 
     def init_tab_estadisticas(self):
@@ -198,18 +217,14 @@ class TheCoinVaultApp(QWidget):
 
     # --- Funciones para manejar la interacción de la interfaz ---
     def procesar_anadir_moneda(self):
-        # Esta función se ejecutará cuando se haga clic en "Añadir Moneda"
         datos_nueva_moneda = {}
-        # Recorremos todos los campos de entrada y obtenemos sus valores
         for field_name, line_edit in self.campos_anadir.items():
             datos_nueva_moneda[field_name] = line_edit.text()
         
-        # Validaciones básicas (puedes añadir más si quieres)
         if not datos_nueva_moneda.get("pais_emisor") or not datos_nueva_moneda.get("anio_acunacion"):
             QMessageBox.warning(self, "Error de Entrada", "Los campos 'País Emisor' y 'Año de Acuñación' son obligatorios.")
             return
 
-        # Convertir a tipos numéricos si es necesario
         try:
             datos_nueva_moneda['anio_acunacion'] = int(datos_nueva_moneda['anio_acunacion'])
             datos_nueva_moneda['valor_numerico'] = float(datos_nueva_moneda['valor_numerico']) if datos_nueva_moneda['valor_numerico'] else 0.0
@@ -222,15 +237,31 @@ class TheCoinVaultApp(QWidget):
             QMessageBox.critical(self, "Error de Formato", "Por favor, introduce valores numéricos válidos para los campos correspondientes (Año, Valor Numérico, Peso, Diámetro, Grosor, Tirada, Cantidad).")
             return
 
-        # Llamamos a nuestra función de lógica para añadir la moneda
         anadir_moneda(datos_nueva_moneda)
         QMessageBox.information(self, "Moneda Añadida", "¡La moneda ha sido añadida a tu colección!")
-        self.limpiar_campos_anadir() # Limpiamos los campos después de añadir
+        self.limpiar_campos_anadir()
 
     def limpiar_campos_anadir(self):
-        # Esta función se ejecutará cuando se haga clic en "Limpiar Campos"
         for line_edit in self.campos_anadir.values():
-            line_edit.clear() # Borra el texto de cada campo de entrada
+            line_edit.clear()
+
+    def procesar_busqueda_moneda(self):
+        pais_a_buscar = self.search_input.text() # Obtenemos el texto del campo de búsqueda
+        if not pais_a_buscar:
+            QMessageBox.warning(self, "Búsqueda Vacía", "Por favor, introduce un país para buscar.")
+            return
+
+        monedas_encontradas = buscar_por_pais(pais_a_buscar) # Llamamos a nuestra función de lógica
+        
+        self.search_results_area.clear() # Limpiamos el área de resultados antes de mostrar nuevos
+        
+        if monedas_encontradas:
+            self.search_results_area.append(f"Se encontraron {len(monedas_encontradas)} monedas de '{pais_a_buscar}':\n")
+            for moneda in monedas_encontradas:
+                self.search_results_area.append(f"- Código: {moneda['codigo_unico']}, Tipo: {moneda['tipo_moneda']}, Año: {moneda['anio_acunacion']}")
+        else:
+            self.search_results_area.append(f"No se encontraron monedas de '{pais_a_buscar}'.")
+
 
 # 2. El bloque principal para ejecutar la aplicación.
 if __name__ == '__main__':
